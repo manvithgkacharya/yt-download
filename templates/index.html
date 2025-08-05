@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .format-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .navbar {
+            transition: all 0.3s ease;
+        }
+        .nav-links {
+            transition: all 0.3s ease;
+        }
+        .hamburger {
+            display: none;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+            .nav-links {
+                display: none;
+                width: 100%;
+                text-align: center;
+            }
+            .nav-links.active {
+                display: flex;
+                flex-direction: column;
+                background-color: rgba(255, 255, 255, 0.95);
+                position: absolute;
+                top: 60px;
+                left: 0;
+                right: 0;
+                padding: 1rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                z-index: 1000;
+            }
+            .nav-links a {
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #eee;
+            }
+            .nav-links a:last-child {
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
+    <!-- Navigation Bar -->
+    <nav class="navbar bg-white shadow-md py-3 px-4 md:px-8 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="/" class="text-xl font-bold text-blue-600 flex items-center">
+                    <i class="fab fa-youtube mr-2 text-red-600"></i> YouTube Downloader
+                </a>
+            </div>
+            
+            <!-- Desktop Navigation -->
+            <div class="nav-links md:flex space-x-6">
+                <a href="/" class="text-gray-700 hover:text-blue-600 transition"><i class="fas fa-home mr-1"></i> Home</a>
+                <a href="/how-to-use" class="text-gray-700 hover:text-blue-600 transition"><i class="fas fa-question-circle mr-1"></i> How to Use</a>
+                <a href="/about" class="text-gray-700 hover:text-blue-600 transition"><i class="fas fa-info-circle mr-1"></i> About</a>
+                <a href="/privacy" class="text-gray-700 hover:text-blue-600 transition"><i class="fas fa-shield-alt mr-1"></i> Privacy</a>
+            </div>
+            
+            <!-- Mobile Hamburger Menu -->
+            <div class="hamburger md:hidden">
+                <i class="fas fa-bars text-2xl text-gray-700"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 pt-6">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-600 mb-2">YouTube Video Downloader</h1>
+            <p class="text-gray-600">Download videos and audio from YouTube in high quality</p>
+        </header>
+
+        <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="url-input" placeholder="Paste YouTube URL here" 
+                       class="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="fetch-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300 flex items-center justify-center min-w-[120px]">
+                    <span id="fetch-text">Get Formats</span>
+                    <div id="fetch-loader" class="loader hidden ml-2"></div>
+                </button>
+            </div>
+        </div>
+
+        <div id="formats-container" class="max-w-3xl mx-auto hidden">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Available Formats</h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-medium text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-video mr-2 text-blue-500"></i> Video Formats
+                    </h3>
+                    <div id="video-formats" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-medium text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-music mr-2 text-blue-500"></i> Audio Formats
+                    </h3>
+                    <div id="audio-formats" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="download-progress" class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-cloud-download-alt mr-2 text-blue-500"></i> Download Progress
+            </h2>
+            <div id="download-loader" class="loader mb-4"></div>
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+                <div id="progress-bar" class="progress-bar bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="progress-text" class="text-center text-gray-600">Preparing download...</div>
+            <div id="download-complete" class="hidden text-center mt-4">
+                <p class="text-green-600 font-medium mb-2 flex items-center justify-center">
+                    <i class="fas fa-check-circle mr-2"></i> Download complete!
+                </p>
+                <p class="text-sm text-gray-500">Check your downloads folder</p>
+            </div>
+        </div>
+
+        <div class="max-w-3xl mx-auto mt-8 text-center text-sm text-gray-500">
+            <p><i class="fas fa-exclamation-circle mr-1"></i> Note: This service does not store any personal information or require login.</p>
+            <p class="mt-2"><i class="fas fa-copyright mr-1"></i> All content is property of their respective owners. We do not claim ownership of any downloaded content.</p>
+        </div>
+    </div>
+
+    <script>
+        // Toggle mobile menu
+        document.querySelector('.hamburger').addEventListener('click', function() {
+            document.querySelector('.nav-links').classList.toggle('active');
+        });
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.nav-links').classList.remove('active');
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlInput = document.getElementById('url-input');
+            const fetchBtn = document.getElementById('fetch-btn');
+            const fetchText = document.getElementById('fetch-text');
+            const fetchLoader = document.getElementById('fetch-loader');
+            const formatsContainer = document.getElementById('formats-container');
+            const videoFormats = document.getElementById('video-formats');
+            const audioFormats = document.getElementById('audio-formats');
+            const downloadProgress = document.getElementById('download-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const downloadComplete = document.getElementById('download-complete');
+            const downloadLoader = document.getElementById('download-loader');
+
+            fetchBtn.addEventListener('click', async function() {
+                const url = urlInput.value.trim();
+                if (!url) return;
+
+                // Show loader
+                fetchText.classList.add('hidden');
+                fetchLoader.classList.remove('hidden');
+                fetchBtn.disabled = true;
+
+                try {
+                    const response = await fetch('/get-formats', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url: url }),
+                    });
+
+                    if (!response.ok) throw new Error('Failed to fetch formats');
+
+                    const data = await response.json();
+
+                    // Clear previous formats
+                    videoFormats.innerHTML = '';
+                    audioFormats.innerHTML = '';
+
+                    // Display video formats
+                    data.videos.forEach(format => {
+                        const formatCard = document.createElement('div');
+                        formatCard.className = 'format-card bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer transition duration-300';
+                        formatCard.innerHTML = `
+                            <h4 class="font-medium text-gray-800">${format.res}</h4>
+                            <p class="text-sm text-gray-500">Size: ${format.size}</p>
+                            <div class="mt-2 text-blue-600 text-sm flex items-center">
+                                <i class="fas fa-download mr-1"></i> Click to download
+                            </div>
+                        `;
+                        formatCard.addEventListener('click', () => startDownload(url, format.id));
+                        videoFormats.appendChild(formatCard);
+                    });
+
+                    // Display audio formats
+                    data.audios.forEach(format => {
+                        const formatCard = document.createElement('div');
+                        formatCard.className = 'format-card bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer transition duration-300';
+                        formatCard.innerHTML = `
+                            <h4 class="font-medium text-gray-800">Audio (${format.bitrate} kbps)</h4>
+                            <p class="text-sm text-gray-500">Size: ${format.size}</p>
+                            <div class="mt-2 text-blue-600 text-sm flex items-center">
+                                <i class="fas fa-download mr-1"></i> Click to download
+                            </div>
+                        `;
+                        formatCard.addEventListener('click', () => startDownload(url, format.id));
+                        audioFormats.appendChild(formatCard);
+                    });
+
+                    formatsContainer.classList.remove('hidden');
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                } finally {
+                    // Hide loader
+                    fetchText.classList.remove('hidden');
+                    fetchLoader.classList.add('hidden');
+                    fetchBtn.disabled = false;
+                }
+            });
+
+            async function startDownload(url, formatId) {
+                // Show download loader and hide formats
+                formatsContainer.classList.add('hidden');
+                downloadProgress.classList.remove('hidden');
+                downloadLoader.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = 'Preparing download...';
+                downloadComplete.classList.add('hidden');
+
+                try {
+                    const response = await fetch('/download', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ url: url, format_id: formatId }),
+                    });
+
+                    if (!response.ok) throw new Error('Failed to start download');
+
+                    const data = await response.json();
+                    const downloadId = data.download_id;
+
+                    // Poll for progress updates
+                    const progressInterval = setInterval(async () => {
+                        const progressResponse = await fetch(`/progress/${downloadId}`);
+                        const progressData = await progressResponse.json();
+
+                        if (progressData.status === 'downloading') {
+                            // Hide loader when progress reaches 5%
+                            if (progressData.progress >= 5) {
+                                downloadLoader.classList.add('hidden');
+                            }
+                            
+                            progressBar.style.width = `${progressData.progress}%`;
+                            progressText.textContent = `Downloading: ${progressData.progress}% (${progressData.downloaded_mb} MB of ${progressData.total_mb} MB)`;
+                        } else if (progressData.status === 'finished') {
+                            clearInterval(progressInterval);
+                            progressBar.style.width = '100%';
+                            progressText.textContent = 'Processing video...';
+                            setTimeout(() => {
+                                progressText.textContent = 'Download complete!';
+                                downloadComplete.classList.remove('hidden');
+                            }, 1000);
+                        } else if (progressData.status === 'unknown') {
+                            clearInterval(progressInterval);
+                            progressText.textContent = 'Download failed or was interrupted';
+                        }
+                    }, 1000);
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                    downloadProgress.classList.add('hidden');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
